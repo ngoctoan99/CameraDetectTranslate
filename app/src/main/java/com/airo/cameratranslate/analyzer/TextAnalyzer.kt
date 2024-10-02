@@ -18,16 +18,14 @@
 package com.airo.cameratranslate.analyzer
 
 import android.content.Context
-import android.graphics.Rect
 import android.util.Log
 import android.widget.Toast
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
-import com.airo.cameratranslate.GraphicOverlay
 import com.airo.cameratranslate.TextGraphic
-import com.airo.cameratranslate.util.ImageUtils
+import com.airo.cameratranslate.java.GraphicOverlayNew
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.common.InputImage
@@ -44,11 +42,12 @@ class TextAnalyzer(
     private val lifecycle: Lifecycle,
     private val result: MutableLiveData<String>,
     private val imageCropPercentages: MutableLiveData<Pair<Int, Int>>,
-    private val mGraphicOverlay : GraphicOverlay
+    private val mGraphicOverlay : GraphicOverlayNew
 ) : ImageAnalysis.Analyzer {
 
     // TODO: Instantiate TextRecognition detector
     private val detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    var needUpdateGraphicOverlayImageSourceInfo : Boolean = true
 //    private val detector = TextRecognition.getClient()
     // TODO: Add lifecycle observer to properly close ML Kit detectors
     init {
@@ -56,6 +55,23 @@ class TextAnalyzer(
     }
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image ?: return
+        if (needUpdateGraphicOverlayImageSourceInfo) {
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+            if (rotationDegrees == 0 || rotationDegrees == 180) {
+                mGraphicOverlay.setImageSourceInfo(
+                    imageProxy.width, imageProxy.height, false
+                )
+            } else {
+                mGraphicOverlay.setImageSourceInfo(
+                    imageProxy.height, imageProxy.width, false
+                )
+            }
+            needUpdateGraphicOverlayImageSourceInfo = false
+        }
+
+//        mGraphicOverlay.setImageSourceInfo(
+//            imageProxy.width, imageProxy.height, true
+//        )
 
 //        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
 //
@@ -140,16 +156,18 @@ class TextAnalyzer(
             return
         }
         mGraphicOverlay.clear()
-        for (i in blocks.indices) {
-            val lines = blocks[i].lines
-            for (j in lines.indices) {
-                val elements = lines[j].elements
-                for (k in elements.indices) {
-                    val textGraphic: GraphicOverlay.Graphic = TextGraphic(mGraphicOverlay, elements[k])
-                    mGraphicOverlay.add(textGraphic)
-                }
-            }
-        }
+//        for (i in blocks.indices) {
+//            val lines = blocks[i].lines
+//            for (j in lines.indices) {
+//                val elements = lines[j].elements
+//                for (k in elements.indices) {
+//                    val textGraphic: GraphicOverlay.Graphic = TextGraphic(mGraphicOverlay, elements[k])
+//                    mGraphicOverlay.add(textGraphic)
+//                }
+//            }
+//        }
+        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts)
+        mGraphicOverlay.add(textGraphic)
     }
 
     private fun getErrorMessage(exception: Exception): String? {

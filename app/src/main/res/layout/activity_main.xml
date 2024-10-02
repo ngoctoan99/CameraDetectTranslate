@@ -39,7 +39,7 @@
         app:layout_constraintEnd_toEndOf="@id/viewFinder"
         app:layout_constraintBottom_toBottomOf="@id/viewFinder"
         app:layout_constraintTop_toTopOf="@id/viewFinder" />
-    <com.airo.cameratranslate.GraphicOverlay
+    <com.airo.cameratranslate.java.GraphicOverlayNew
         android:id="@+id/graphic_overlay"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"

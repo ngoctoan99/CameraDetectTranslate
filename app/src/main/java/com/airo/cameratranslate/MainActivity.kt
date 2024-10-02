@@ -147,7 +147,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun surfaceCreated(holder: SurfaceHolder) {
-                    holder?.let { drawOverlay(it, DESIRED_HEIGHT_CROP_PERCENT, DESIRED_WIDTH_CROP_PERCENT) }
+//                    holder?.let { drawOverlay(it, DESIRED_HEIGHT_CROP_PERCENT, DESIRED_WIDTH_CROP_PERCENT) }
                 }
 
             })
@@ -214,8 +214,8 @@ class MainActivity : AppCompatActivity() {
         val rotation = binding.viewFinder.display.rotation
 
         val preview = Preview.Builder()
-            .setTargetAspectRatio(screenAspectRatio)
-            .setTargetRotation(rotation)
+//            .setTargetAspectRatio(screenAspectRatio)
+//            .setTargetRotation(rotation)
             .build()
 
         // Build the image analysis use case and instantiate our analyzer
@@ -238,8 +238,8 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         viewModel.sourceText.observe(this, Observer { binding.srcText.text = it })
-        viewModel.imageCropPercentages.observe(this,
-            Observer { drawOverlay(binding.overlay.holder, it.first, it.second) })
+//        viewModel.imageCropPercentages.observe(this,
+//            Observer { drawOverlay(binding.overlay.holder, it.first, it.second) })
 
         // Select back camera since text detection does not work with front camera
         val cameraSelector =
@@ -269,50 +269,50 @@ class MainActivity : AppCompatActivity() {
         return AspectRatio.RATIO_16_9
     }
 
-    private fun drawOverlay(
-        holder: SurfaceHolder,
-        heightCropPercent: Int,
-        widthCropPercent: Int
-    ) {
-        val canvas = holder.lockCanvas()
-        val bgPaint = Paint().apply {
-            alpha = 140
-        }
-        canvas.drawPaint(bgPaint)
-        val rectPaint = Paint()
-        rectPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
-        rectPaint.style = Paint.Style.FILL
-        rectPaint.color = Color.WHITE
-        val outlinePaint = Paint()
-        outlinePaint.style = Paint.Style.STROKE
-        outlinePaint.color = Color.RED
-        outlinePaint.strokeWidth = 4f
-        val surfaceWidth = holder.surfaceFrame.width()
-        val surfaceHeight = holder.surfaceFrame.height()
-
-        val cornerRadius = 25f
-        // Set rect centered in frame
-        val rectTop = surfaceHeight * heightCropPercent / 2 / 100f
-        val rectLeft = surfaceWidth * widthCropPercent / 2 / 100f
-        val rectRight = surfaceWidth * (1 - widthCropPercent / 2 / 100f)
-        val rectBottom = surfaceHeight * (1 - heightCropPercent / 2 / 100f)
-        val rect = RectF(rectLeft, rectTop, rectRight, rectBottom)
-        canvas.drawRoundRect(
-            rect, cornerRadius, cornerRadius, rectPaint
-        )
-        canvas.drawRoundRect(
-            rect, cornerRadius, cornerRadius, outlinePaint
-        )
-        val textPaint = Paint()
-        textPaint.color = Color.WHITE
-        textPaint.textSize = 50F
-
-        val overlayText =""
-        val textBounds = Rect()
-        textPaint.getTextBounds(overlayText, 0, overlayText.length, textBounds)
-        val textX = (surfaceWidth - textBounds.width()) / 2f
-        val textY = rectBottom + textBounds.height() + 15f // put text below rect and 15f padding
-        canvas.drawText("", textX, textY, textPaint)
-        holder.unlockCanvasAndPost(canvas)
-    }
+//    private fun drawOverlay(
+//        holder: SurfaceHolder,
+//        heightCropPercent: Int,
+//        widthCropPercent: Int
+//    ) {
+//        val canvas = holder.lockCanvas()
+////        val bgPaint = Paint().apply {
+////            alpha = 140
+////        }
+////        canvas.drawPaint(bgPaint)
+//        val rectPaint = Paint()
+//        rectPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
+//        rectPaint.style = Paint.Style.FILL
+//        rectPaint.color = Color.WHITE
+//        val outlinePaint = Paint()
+//        outlinePaint.style = Paint.Style.STROKE
+//        outlinePaint.color = Color.RED
+//        outlinePaint.strokeWidth = 4f
+//        val surfaceWidth = holder.surfaceFrame.width()
+//        val surfaceHeight = holder.surfaceFrame.height()
+//
+//        val cornerRadius = 25f
+//        // Set rect centered in frame
+//        val rectTop = surfaceHeight * heightCropPercent / 2 / 100f
+//        val rectLeft = surfaceWidth * widthCropPercent / 2 / 100f
+//        val rectRight = surfaceWidth * (1 - widthCropPercent / 2 / 100f)
+//        val rectBottom = surfaceHeight * (1 - heightCropPercent / 2 / 100f)
+//        val rect = RectF(rectLeft, rectTop, rectRight, rectBottom)
+//        canvas.drawRoundRect(
+//            rect, cornerRadius, cornerRadius, rectPaint
+//        )
+//        canvas.drawRoundRect(
+//            rect, cornerRadius, cornerRadius, outlinePaint
+//        )
+//        val textPaint = Paint()
+//        textPaint.color = Color.WHITE
+//        textPaint.textSize = 50F
+//
+//        val overlayText =""
+//        val textBounds = Rect()
+//        textPaint.getTextBounds(overlayText, 0, overlayText.length, textBounds)
+//        val textX = (surfaceWidth - textBounds.width()) / 2f
+//        val textY = rectBottom + textBounds.height() + 15f // put text below rect and 15f padding
+//        canvas.drawText("", textX, textY, textPaint)
+//        holder.unlockCanvasAndPost(canvas)
+//    }
 }
