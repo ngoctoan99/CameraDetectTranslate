@@ -19,8 +19,13 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.util.Log
 import com.airo.cameratranslate.java.GraphicOverlayNew
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.mlkit.vision.text.Text
-import java.util.Arrays
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.util.Objects
+import java.util.stream.Collectors
 import kotlin.math.max
 import kotlin.math.min
 
@@ -28,7 +33,7 @@ import kotlin.math.min
  * Graphic instance for rendering TextBlock position, size, and ID within an associated graphic
  * overlay view.
  */
-class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?) : GraphicOverlayNew.Graphic(
+class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, private val viewModel: MainViewModel, private val lists : List<String>) : GraphicOverlayNew.Graphic(
     overlay!!
 ) {
     private val rectPaint = Paint()
@@ -54,30 +59,9 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?) : Gra
     /**
      * Draws the text block annotations for position, size, and raw value on the supplied canvas.
      */
-//    override fun draw(canvas: Canvas?) {
-//        Log.d(TAG, "on draw text graphic")
-//        checkNotNull(element) { "Attempting to draw a null text." }
-//        Log.d("TTT", element.toString())
-//
-//        // Draws the bounding box around the TextBlock.
-//        val rect = RectF(element.boundingBox)
-//        canvas!!.drawRect(rect, rectPaint)
-//
-//        // Renders the text at the bottom of the box.
-//        canvas.drawText(
-//            element.text,
-//            rect.left + (0.3 * rect.left).toFloat(),
-//            rect.bottom + (0.06 * rect.bottom).toFloat(),
-//            textPaint
-//        )
-//    }
     override fun draw(canvas: Canvas?) {
         checkNotNull(element) { "Attempting to draw a null text." }
-        Log.d(TAG, "Text is: " + element.text)
         for (textBlock in element.textBlocks) { // Renders the text at the bottom of the box.
-            Log.d(TAG, "TextBlock text is: " + textBlock.text)
-            Log.d(TAG, "TextBlock boundingbox is: " + textBlock.boundingBox)
-            Log.d(TAG, "TextBlock cornerpoint is: " + Arrays.toString(textBlock.cornerPoints))
             if (false) {
                 drawText(
                     getFormattedText(textBlock.text, textBlock.recognizedLanguage, confidence = null),
@@ -86,35 +70,15 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?) : Gra
                     canvas!!
                 )
             } else {
-                for (line in textBlock.lines) {
-                    Log.d(TAG, "Line text is: " + line.text)
-                    Log.d(TAG, "Line boundingbox is: " + line.boundingBox)
-                    Log.d(TAG, "Line cornerpoint is: " + Arrays.toString(line.cornerPoints))
-                    Log.d(TAG, "Line confidence is: " + line.confidence)
-                    Log.d(TAG, "Line angle is: " + line.angle)
-                    // Draws the bounding box around the TextBlock.
-                    val rect = RectF(line.boundingBox)
+                Log.d("TTTT","${textBlock.lines.size} // ${lists.size}")
+                for (i in 0..<textBlock.lines.size) {
+                    val rect = RectF(textBlock.lines[i].boundingBox)
                     drawText(
-                        getFormattedText(line.text, line.recognizedLanguage, line.confidence),
+                        getFormattedText(lists[i], textBlock.lines[i].recognizedLanguage, 0f),
                         rect,
                         TEXT_SIZE + 2 * STROKE_WIDTH,
                         canvas!!
                     )
-                    for (element in line.elements) {
-                        Log.d(TAG, "Element text is: " + element.text)
-                        Log.d(TAG, "Element boundingbox is: " + element.boundingBox)
-                        Log.d(TAG, "Element cornerpoint is: " + Arrays.toString(element.cornerPoints))
-                        Log.d(TAG, "Element language is: " + element.recognizedLanguage)
-                        Log.d(TAG, "Element confidence is: " + element.confidence)
-                        Log.d(TAG, "Element angle is: " + element.angle)
-                        for (symbol in element.symbols) {
-                            Log.d(TAG, "Symbol text is: " + symbol.text)
-                            Log.d(TAG, "Symbol boundingbox is: " + symbol.boundingBox)
-                            Log.d(TAG, "Symbol cornerpoint is: " + Arrays.toString(symbol.cornerPoints))
-                            Log.d(TAG, "Symbol confidence is: " + symbol.confidence)
-                            Log.d(TAG, "Symbol angle is: " + symbol.angle)
-                        }
-                    }
                 }
             }
         }
@@ -152,7 +116,7 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?) : Gra
         private const val TAG = "TextGraphic"
         private const val TEXT_COLOR = Color.RED
         private const val TEXT_SIZE = 30.0f
-        private const val STROKE_WIDTH = 4.0f
+        private const val STROKE_WIDTH = 0.0f
         private const val TEXT_WITH_LANGUAGE_TAG_FORMAT = "%s:%s"
         private const val MARKER_COLOR = Color.WHITE
     }

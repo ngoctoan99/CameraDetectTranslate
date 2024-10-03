@@ -33,12 +33,14 @@ import com.airo.cameratranslate.util.SmoothedMutableLiveData
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.common.model.DownloadConditions
 
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
+import com.google.mlkit.vision.text.Text
 
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -52,8 +54,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // camera feed. However, we are not guaranteed what aspect ratio we will get from the camera, so
     // we use the first frame we get back from the camera to update these crop percentages based on
     // the actual aspect ratio of images.
-    val imageCropPercentages = MutableLiveData<Pair<Int, Int>>()
-        .apply { value = Pair(DESIRED_HEIGHT_CROP_PERCENT, DESIRED_WIDTH_CROP_PERCENT) }
+//    val imageCropPercentages = MutableLiveData<Pair<Int, Int>>()
+//        .apply { value = Pair(DESIRED_HEIGHT_CROP_PERCENT, DESIRED_WIDTH_CROP_PERCENT) }
     val translatedText = MediatorLiveData<ResultOrError>()
     private val translating = MutableLiveData<Boolean>()
     val modelDownloading = SmoothedMutableLiveData<Boolean>(SMOOTHING_DURATION)
@@ -63,6 +65,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val translators =
         object : LruCache<TranslatorOptions, Translator>(NUM_TRANSLATORS) {
             override fun create(options: TranslatorOptions): Translator {
+                Log.d("TranslatorCache", "Creating new translator for options: $options")
                 return Translation.getClient(options)
             }
 
@@ -72,7 +75,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 oldValue: Translator,
                 newValue: Translator?
             ) {
-                oldValue.close()
+                Log.d("TranslatorCache", "Removing translator for options: $key")
+                try {
+                    oldValue.close()
+                } catch (e: Exception) {
+                    Log.e("TranslatorCache", "Error closing translator: ${e.message}")
+                }
             }
         }
 
@@ -94,8 +102,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         translators.evictAll()
     }
 
-    private fun translate(): Task<String> {
+    fun translate(): Task<String> {
         val text = sourceText.value
+        val source = sourceLang.value
+        val target = targetLang.value
+        if (modelDownloading.value != false || translating.value != false) {
+            return Tasks.forCanceled()
+        }
+        if (source == null || target == null || text == null || text.isEmpty()) {
+            return Tasks.forResult("")
+        }
+        val sourceLangCode = TranslateLanguage.fromLanguageTag(source.code)
+        val targetLangCode = TranslateLanguage.fromLanguageTag(target.code)
+        if (sourceLangCode == null || targetLangCode == null) {
+            return Tasks.forCanceled()
+        }
+        val options = TranslatorOptions.Builder()
+            .setSourceLanguage(sourceLangCode)
+            .setTargetLanguage(targetLangCode)
+            .build()
+        val translator = translators[options]
+        modelDownloading.setValue(true)
+
+        // Register watchdog to unblock long running downloads
+        Handler().postDelayed({ modelDownloading.setValue(false) }, 15000)
+        modelDownloadTask = translator.downloadModelIfNeeded().addOnCompleteListener {
+            modelDownloading.setValue(false)
+        }
+        translating.value = true
+        return modelDownloadTask.onSuccessTask {
+            translator.translate(text)
+        }.addOnCompleteListener {
+            translating.value = false
+        }
+    }
+
+
+    fun translateText( str : String): Task<String> {
+        Log.d("TTTT","translateText1" +str)
+        val text = str
         val source = sourceLang.value
         val target = targetLang.value
         if (modelDownloading.value != false || translating.value != false) {
@@ -150,9 +195,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         // Start translation if any of the following change: detected text, source lang, target lang.
-        translatedText.addSource(sourceText) { translate().addOnCompleteListener(processTranslation) }
-        translatedText.addSource(sourceLang) { translate().addOnCompleteListener(processTranslation) }
-        translatedText.addSource(targetLang) { translate().addOnCompleteListener(processTranslation) }
+//        translatedText.addSource(sourceText) { translate().addOnCompleteListener(processTranslation) }
+//        translatedText.addSource(sourceLang) { translate().addOnCompleteListener(processTranslation) }
+//        translatedText.addSource(targetLang) { translate().addOnCompleteListener(processTranslation) }
     }
 
     companion object {

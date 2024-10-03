@@ -18,20 +18,29 @@
 package com.airo.cameratranslate.analyzer
 
 import android.content.Context
+import android.os.Handler
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.OptIn
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.MutableLiveData
+import com.airo.cameratranslate.MainViewModel
 import com.airo.cameratranslate.TextGraphic
 import com.airo.cameratranslate.java.GraphicOverlayNew
+import com.airo.cameratranslate.util.ResultOrError
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.delay
+import java.util.concurrent.Executors
+
+//import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 /**
  * Analyzes the frames passed in from the camera and returns any detected text within the requested
@@ -41,18 +50,21 @@ class TextAnalyzer(
     private val context: Context,
     private val lifecycle: Lifecycle,
     private val result: MutableLiveData<String>,
-    private val imageCropPercentages: MutableLiveData<Pair<Int, Int>>,
-    private val mGraphicOverlay : GraphicOverlayNew
+//    private val imageCropPercentages: MutableLiveData<Pair<Int, Int>>,
+    private val mGraphicOverlay : GraphicOverlayNew,
+    private var viewModel : MainViewModel
 ) : ImageAnalysis.Analyzer {
 
     // TODO: Instantiate TextRecognition detector
-    private val detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+//    private val detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val detector = TextRecognition.getClient()
     var needUpdateGraphicOverlayImageSourceInfo : Boolean = true
 //    private val detector = TextRecognition.getClient()
     // TODO: Add lifecycle observer to properly close ML Kit detectors
     init {
         lifecycle.addObserver(detector)
     }
+    @OptIn(ExperimentalGetImage::class)
     override fun analyze(imageProxy: ImageProxy) {
         val mediaImage = imageProxy.image ?: return
         if (needUpdateGraphicOverlayImageSourceInfo) {
@@ -68,62 +80,22 @@ class TextAnalyzer(
             }
             needUpdateGraphicOverlayImageSourceInfo = false
         }
-
-//        mGraphicOverlay.setImageSourceInfo(
-//            imageProxy.width, imageProxy.height, true
-//        )
-
-//        val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-//
-//        // We requested a setTargetAspectRatio, but it's not guaranteed that's what the camera
-//        // stack is able to support, so we calculate the actual ratio from the first frame to
-//        // know how to appropriately crop the image we want to analyze.
-//        val imageHeight = mediaImage.height
-//        val imageWidth = mediaImage.width
-//        Log.d("TTTanalyze","height : ${imageHeight}// width : ${imageWidth}")
-//        val actualAspectRatio = imageWidth / imageHeight
-//
-//        val convertImageToBitmap = ImageUtils.convertYuv420888ImageToBitmap(mediaImage)
-//        val cropRect = Rect(0, 0, imageWidth, imageHeight)
-//
-//        // If the image has a way wider aspect ratio than expected, crop less of the height so we
-//        // don't end up cropping too much of the image. If the image has a way taller aspect ratio
-//        // than expected, we don't have to make any changes to our cropping so we don't handle it
-//        // here.
-//        val currentCropPercentages = imageCropPercentages.value ?: return
-//        if (actualAspectRatio > 3) {
-//            val originalHeightCropPercentage = currentCropPercentages.first
-//            val originalWidthCropPercentage = currentCropPercentages.second
-//            imageCropPercentages.value =
-//                Pair(originalHeightCropPercentage / 2, originalWidthCropPercentage)
-//        }
-//
-//        // If the image is rotated by 90 (or 270) degrees, swap height and width when calculating
-//        // the crop.
-//        val cropPercentages = imageCropPercentages.value ?: return
-//        val heightCropPercent = cropPercentages.first
-//        val widthCropPercent = cropPercentages.second
-//        val (widthCrop, heightCrop) = when (rotationDegrees) {
-//            90, 270 -> Pair(heightCropPercent / 100f, widthCropPercent / 100f)
-//            else -> Pair(widthCropPercent / 100f, heightCropPercent / 100f)
-//        }
-//
-//        cropRect.inset(
-//            (imageWidth * widthCrop / 2).toInt(),
-//            (imageHeight * heightCrop / 2).toInt()
-//        )
-//        val croppedBitmap =
-//            ImageUtils.rotateAndCrop(convertImageToBitmap, rotationDegrees, cropRect)
-
         // TODO call recognizeText() once implemented
         val inputImage: InputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
 //        recognizeTextOnDevice(InputImage.fromBitmap(croppedBitmap, 0)).addOnCompleteListener {
 //            imageProxy.close()
 //        }
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            // Simulate background work
+            Thread.sleep(2000)
 
-        recognizeTextOnDevice(inputImage).addOnCompleteListener {
-            imageProxy.close()
+            // Update the UI on the main thread
+            recognizeTextOnDevice(inputImage).addOnCompleteListener {
+                imageProxy.close()
+            }
         }
+
 
     }
 
@@ -131,17 +103,23 @@ class TextAnalyzer(
         image: InputImage
     ): Task<Text> {
         // Pass image to an ML Kit Vision API
-        Log.d("TTTrecognizeTextOnDevice","height : ${image.height}// width : ${image.width}")
         return detector.process(image)
             .addOnSuccessListener { visionText ->
                 // Task completed successfully
                 result.value = visionText.text
-                Log.e(TAG, "recognizeTextOnDevice" + visionText.text)
-                processTextRecognitionResult(visionText)
+//                if(visionText.textBlocks.size > 0){
+//                    for( i in 0..<visionText.textBlocks.size){
+//                        for( j in 0..<visionText.textBlocks[i].lines.size){
+//                            result.value = visionText.textBlocks[i].lines[j].text
+//                        }
+//                    }
+//                }
+//                Log.e(TAG, "recognizeTextOnDevice" + visionText.text)
+                processTextRecognitionResult(visionText,viewModel)
             }
             .addOnFailureListener { exception ->
                 // Task failed with an exception
-                Log.e(TAG, "Text recognition error", exception)
+//                Log.e(TAG, "Text recognition error", exception)
                 val message = getErrorMessage(exception)
                 message?.let {
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -149,7 +127,8 @@ class TextAnalyzer(
             }
     }
 
-    private fun processTextRecognitionResult(texts: Text) {
+    private fun processTextRecognitionResult(texts: Text , viewModel : MainViewModel) {
+
         val blocks = texts.textBlocks
         if (blocks.size == 0) {
             mGraphicOverlay.clear()
@@ -166,8 +145,46 @@ class TextAnalyzer(
 //                }
 //            }
 //        }
-        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts)
-        mGraphicOverlay.add(textGraphic)
+
+//        var list  = listOf("Enjoy drinking", "take care", "the driving")
+        val listInit = emptyList<String>().toMutableList()
+        for (i in blocks.indices) {
+            val lines = blocks[i].lines
+            for (j in lines.indices) {
+                listInit += lines[j].text
+            }
+
+        }
+
+        val string = listInit.joinToString(
+            separator = "^",
+        )
+        Log.d("TTT1",""+string+ "" + listInit.size)
+        val processTranslation =
+            OnCompleteListener<String> { task ->
+                if(task.isSuccessful){
+                    val list = task.result!!.splitToSequence("^")
+                        .filter { it.isNotEmpty() } // or: .filter { it.isNotBlank() }
+                        .toList()
+                    Log.d("TTT1",""+task.result.toString() + "" + list.size)
+                    if(list.isNotEmpty() && list.size == listInit.size){
+                        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts ,viewModel,list)
+                        mGraphicOverlay.add(textGraphic)
+                    }
+                }else {
+                    if (task.isCanceled) {
+                        // Tasks are cancelled for reasons such as gating; ignore.
+                        return@OnCompleteListener
+                    }
+//                    translatedText.value = ResultOrError(null, task.exception)
+                    Log.d("TTT1","Error")
+                }
+            }
+        viewModel.translateText(string).addOnCompleteListener(processTranslation)
+
+//        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts ,viewModel)
+//        mGraphicOverlay.add(textGraphic)
+
     }
 
     private fun getErrorMessage(exception: Exception): String? {

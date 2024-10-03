@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
     val RATIO_16_9_VALUE = 16.0 / 9.0
     private var displayId: Int = -1
 
-    private val TAG = "TTTLog"
+    private val TAG = "MainActivity"
 
     private val viewModel: MainViewModel by viewModels()
     private var cameraProvider: ProcessCameraProvider? = null
@@ -112,13 +112,13 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>) {}
         }
 
-        viewModel.sourceLang.observe(this, Observer { binding.srcLang.text = it.displayName })
+//        viewModel.sourceLang.observe(this, Observer { binding.srcLang.text = it.displayName })
         viewModel.translatedText.observe(this, Observer { resultOrError ->
             resultOrError?.let {
                 if (it.error != null) {
-                    binding.translatedText.error = resultOrError.error?.localizedMessage
+                    binding.tvTranslate.text = resultOrError.error?.localizedMessage
                 } else {
-                    binding.translatedText.text = resultOrError.result
+                     binding.tvTranslate.text = resultOrError.result.toString()
                 }
             }
         })
@@ -206,10 +206,10 @@ class MainActivity : AppCompatActivity() {
 
         // Get screen metrics used to setup camera for full screen resolution
         val metrics = DisplayMetrics().also { binding.viewFinder.display.getRealMetrics(it) }
-        Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
+//        Log.d(TAG, "Screen metrics: ${metrics.widthPixels} x ${metrics.heightPixels}")
 
         val screenAspectRatio = aspectRatio(metrics.widthPixels, metrics.heightPixels)
-        Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
+//        Log.d(TAG, "Preview aspect ratio: $screenAspectRatio")
 
         val rotation = binding.viewFinder.display.rotation
 
@@ -232,15 +232,17 @@ class MainActivity : AppCompatActivity() {
                         this,
                         lifecycle,
                         viewModel.sourceText,
-                        viewModel.imageCropPercentages,
-                        binding.graphicOverlay
+//                        viewModel.imageCropPercentages,
+                        binding.graphicOverlay,
+                        viewModel
                     )
                 )
             }
-        viewModel.sourceText.observe(this, Observer { binding.srcText.text = it })
+//        viewModel.sourceText.observe(this, Observer { binding.srcText.text = it })
 //        viewModel.imageCropPercentages.observe(this,
 //            Observer { drawOverlay(binding.overlay.holder, it.first, it.second) })
 
+        viewModel.sourceLang.observe(this, Observer { binding.tvSrcLang.text = it.displayName })
         // Select back camera since text detection does not work with front camera
         val cameraSelector =
             CameraSelector.Builder().requireLensFacing(CameraSelector.LENS_FACING_BACK).build()
