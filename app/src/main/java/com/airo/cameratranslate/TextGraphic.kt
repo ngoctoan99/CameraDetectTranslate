@@ -33,12 +33,13 @@ import kotlin.math.min
  * Graphic instance for rendering TextBlock position, size, and ID within an associated graphic
  * overlay view.
  */
-class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, private val viewModel: MainViewModel, private val lists : List<String>) : GraphicOverlayNew.Graphic(
+class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, private val lists : List<String>) : GraphicOverlayNew.Graphic(
     overlay!!
 ) {
     private val rectPaint = Paint()
     private val textPaint: Paint
-//    private val labelPaint: Paint
+    private val labelPaint: Paint
+    private var position: Int = 0
 
     init {
         rectPaint.color = Color.TRANSPARENT
@@ -49,11 +50,12 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, priva
         textPaint.color = TEXT_COLOR
         textPaint.textSize = TEXT_SIZE
 
-//        labelPaint = Paint()
-//        labelPaint.color = MARKER_COLOR
-//        labelPaint.style = Paint.Style.FILL
+        labelPaint = Paint()
+        labelPaint.color = MARKER_COLOR
+        labelPaint.style = Paint.Style.FILL
         // Redraw the overlay, as this graphic has been added.
         postInvalidate()
+
     }
 
     /**
@@ -63,22 +65,32 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, priva
         checkNotNull(element) { "Attempting to draw a null text." }
         for (textBlock in element.textBlocks) { // Renders the text at the bottom of the box.
             if (false) {
-                drawText(
-                    getFormattedText(textBlock.text, textBlock.recognizedLanguage, confidence = null),
-                    RectF(textBlock.boundingBox),
-                    TEXT_SIZE * textBlock.lines.size + 2 * STROKE_WIDTH,
-                    canvas!!
-                )
+//                drawText(
+//                    textBlock.text,
+////                    RectF(textBlock.boundingBox),
+//                    RectF(0f,0f,0f,0f),
+//                    TEXT_SIZE * textBlock.lines.size + 2 * STROKE_WIDTH,
+//                    canvas!!
+//                )
             } else {
-                Log.d("TTTT","${textBlock.lines.size} // ${lists.size}")
-                for (i in 0..<textBlock.lines.size) {
-                    val rect = RectF(textBlock.lines[i].boundingBox)
+                Log.d("TTTT size","${textBlock.lines.size} // ${lists.size}")
+                for (line in textBlock.lines) {
+                    val rect = RectF(line.boundingBox)
                     drawText(
-                        getFormattedText(lists[i], textBlock.lines[i].recognizedLanguage, 0f),
+                        lists[position],
                         rect,
-                        TEXT_SIZE + 2 * STROKE_WIDTH,
+                        line.boundingBox!!.height() + 2 * STROKE_WIDTH,
                         canvas!!
                     )
+
+                    if(position == textBlock.lines.size - 1){
+                        GlobalScope.launch(Dispatchers.Main) {
+                            position = 0
+                        }
+
+                    }else {
+                        position++
+                    }
                 }
             }
         }
@@ -93,30 +105,31 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, priva
         rect.top = translateY(rect.top)
         rect.bottom = translateY(rect.bottom)
         canvas.drawRect(rect, rectPaint)
-//        val textWidth = textPaint.measureText(text)
-//        canvas.drawRect(
-//            rect.left - STROKE_WIDTH,
-//            rect.top - textHeight,
-//            rect.left + textWidth + 2 * STROKE_WIDTH,
-//            rect.top,
-//            labelPaint
-//        )
+        textPaint.textSize =textHeight
+        val textWidth = textPaint.measureText(text)
+        canvas.drawRect(
+            rect.left - STROKE_WIDTH,
+            rect.top - textHeight,
+            rect.left + textWidth + 2 * STROKE_WIDTH,
+            rect.top,
+            labelPaint
+        )
         // Renders the text at the bottom of the box.
         canvas.drawText(text, rect.left, rect.top - STROKE_WIDTH, textPaint)
     }
 
-    private fun getFormattedText(text: String, languageTag: String, confidence: Float?): String {
-        val res =
-            if (false) String.format(TEXT_WITH_LANGUAGE_TAG_FORMAT, languageTag, text) else text
-        return if (false && confidence != null) String.format("%s (%.2f)", res, confidence)
-        else res
-    }
+//    private fun getFormattedText(text: String, languageTag: String, confidence: Float?): String {
+//        val res =
+//            if (false) String.format(TEXT_WITH_LANGUAGE_TAG_FORMAT, languageTag, text) else text
+//        return if (false && confidence != null) String.format("%s (%.2f)", res, confidence)
+//        else res
+//    }
 
     companion object {
         private const val TAG = "TextGraphic"
-        private const val TEXT_COLOR = Color.RED
+        private const val TEXT_COLOR = Color.BLACK
         private const val TEXT_SIZE = 30.0f
-        private const val STROKE_WIDTH = 0.0f
+        private const val STROKE_WIDTH = 4.0f
         private const val TEXT_WITH_LANGUAGE_TAG_FORMAT = "%s:%s"
         private const val MARKER_COLOR = Color.WHITE
     }

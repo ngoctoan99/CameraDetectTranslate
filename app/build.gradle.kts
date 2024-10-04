@@ -63,9 +63,23 @@ dependencies {
 //    implementation ("com.google.mlkit:language-id:17.0.1")
 //    implementation ("com.google.mlkit:translate:17.0.1")
 
-    implementation ("com.google.android.gms:play-services-mlkit-text-recognition:16.0.0")
-    implementation ("com.google.mlkit:language-id:16.0.0")
-    implementation ("com.google.mlkit:translate:16.0.0")
+//    implementation ("com.google.android.gms:play-services-mlkit-text-recognition:16.0.0")
+    // To recognize Latin script
+    implementation ("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+
+    // To recognize Chinese script
+    implementation ("com.google.android.gms:play-services-mlkit-text-recognition-chinese:16.0.1")
+
+    // To recognize Devanagari script
+    implementation ("com.google.android.gms:play-services-mlkit-text-recognition-devanagari:16.0.1")
+
+    // To recognize Japanese script
+    implementation ("com.google.android.gms:play-services-mlkit-text-recognition-japanese:16.0.1")
+
+    // To recognize Korean script
+    implementation ("com.google.android.gms:play-services-mlkit-text-recognition-korean:16.0.1")
+    implementation ("com.google.mlkit:language-id:17.0.3")
+    implementation ("com.google.mlkit:translate:17.0.3")
 
     implementation ("androidx.lifecycle:lifecycle-extensions:2.2.0")
     implementation ("androidx.lifecycle:lifecycle-livedata-ktx:2.4.1")

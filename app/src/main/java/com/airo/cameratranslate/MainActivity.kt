@@ -3,14 +3,9 @@ package com.airo.cameratranslate
 import android.Manifest
 import android.R
 import android.content.pm.PackageManager
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
-import android.graphics.Rect
-import android.graphics.RectF
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.SurfaceHolder
@@ -26,8 +21,6 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Observer
 import com.airo.cameratranslate.analyzer.TextAnalyzer
@@ -42,7 +35,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 class MainActivity : AppCompatActivity() {
-    companion object{
+    companion object {
         val DESIRED_WIDTH_CROP_PERCENT = 0
         val DESIRED_HEIGHT_CROP_PERCENT = 0
     }
@@ -78,7 +71,7 @@ class MainActivity : AppCompatActivity() {
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         scopedExecutor = ScopedExecutor(cameraExecutor)
-
+        binding.tvTranslate.movementMethod = ScrollingMovementMethod()
         if (allPermissionsGranted()) {
             // Wait for the views to be properly laid out
             binding.viewFinder.post {
@@ -99,18 +92,19 @@ class MainActivity : AppCompatActivity() {
 
         binding.targetLangSelector.adapter = adapter
         binding.targetLangSelector.setSelection(adapter.getPosition(Language("en")))
-        binding.targetLangSelector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(
-                parent: AdapterView<*>,
-                view: View?,
-                position: Int,
-                id: Long
-            ) {
-                viewModel.targetLang.value = adapter.getItem(position)
-            }
+        binding.targetLangSelector.onItemSelectedListener =
+            object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: AdapterView<*>,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    viewModel.targetLang.value = adapter.getItem(position)
+                }
 
-            override fun onNothingSelected(parent: AdapterView<*>) {}
-        }
+                override fun onNothingSelected(parent: AdapterView<*>) {}
+            }
 
 //        viewModel.sourceLang.observe(this, Observer { binding.srcLang.text = it.displayName })
         viewModel.translatedText.observe(this, Observer { resultOrError ->
@@ -118,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                 if (it.error != null) {
                     binding.tvTranslate.text = resultOrError.error?.localizedMessage
                 } else {
-                     binding.tvTranslate.text = resultOrError.result.toString()
+                    binding.tvTranslate.text = resultOrError.result.toString()
                 }
             }
         })
@@ -165,6 +159,7 @@ class MainActivity : AppCompatActivity() {
             this, it
         ) == PackageManager.PERMISSION_GRANTED
     }
+
     override fun onRequestPermissionsResult(
         requestCode: Int, permissions: Array<String>, grantResults: IntArray
     ) {
@@ -227,18 +222,27 @@ class MainActivity : AppCompatActivity() {
             .build()
             .also {
                 it.setAnalyzer(
-                    cameraExecutor
-                    , TextAnalyzer(
+                    cameraExecutor, TextAnalyzer(
                         this,
                         lifecycle,
                         viewModel.sourceText,
-//                        viewModel.imageCropPercentages,
+                        viewModel.textTranslate,
                         binding.graphicOverlay,
                         viewModel
                     )
                 )
             }
-//        viewModel.sourceText.observe(this, Observer { binding.srcText.text = it })
+        viewModel.textTranslate.observe(this, Observer {
+            if (it.isNotEmpty()) {
+                binding.tvTranslate.visibility = View.VISIBLE
+
+                binding.tvTranslate.text = removeSpecialCharacters(it)
+            } else {
+                binding.tvTranslate.visibility = View.GONE
+            }
+        }
+
+        )
 //        viewModel.imageCropPercentages.observe(this,
 //            Observer { drawOverlay(binding.overlay.holder, it.first, it.second) })
 
@@ -317,4 +321,9 @@ class MainActivity : AppCompatActivity() {
 //        canvas.drawText("", textX, textY, textPaint)
 //        holder.unlockCanvasAndPost(canvas)
 //    }
+
+    fun removeSpecialCharacters(input: String): String {
+        // Sử dụng regex để chỉ giữ lại các ký tự chữ và số
+        return input.replace(Regex("[^a-zA-Z0-9\\s]"), "")
+    }
 }

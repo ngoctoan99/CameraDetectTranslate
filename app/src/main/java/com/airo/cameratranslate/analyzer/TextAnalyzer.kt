@@ -19,6 +19,7 @@ package com.airo.cameratranslate.analyzer
 
 import android.content.Context
 import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.OptIn
@@ -30,17 +31,16 @@ import androidx.lifecycle.MutableLiveData
 import com.airo.cameratranslate.MainViewModel
 import com.airo.cameratranslate.TextGraphic
 import com.airo.cameratranslate.java.GraphicOverlayNew
-import com.airo.cameratranslate.util.ResultOrError
+import com.airo.cameratranslate.util.SmoothedMutableLiveData
 import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.common.MlKitException
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
-import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
-//import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 /**
  * Analyzes the frames passed in from the camera and returns any detected text within the requested
@@ -50,14 +50,14 @@ class TextAnalyzer(
     private val context: Context,
     private val lifecycle: Lifecycle,
     private val result: MutableLiveData<String>,
-//    private val imageCropPercentages: MutableLiveData<Pair<Int, Int>>,
-    private val mGraphicOverlay : GraphicOverlayNew,
-    private var viewModel : MainViewModel
+    private val textTranslate: MutableLiveData<String>,
+    private val mGraphicOverlay: GraphicOverlayNew,
+    private var viewModel: MainViewModel
 ) : ImageAnalysis.Analyzer {
 
     // TODO: Instantiate TextRecognition detector
-//    private val detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    private val detector = TextRecognition.getClient()
+    private val detector = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+//    private val detector = TextRecognition.getClient()
     var needUpdateGraphicOverlayImageSourceInfo : Boolean = true
 //    private val detector = TextRecognition.getClient()
     // TODO: Add lifecycle observer to properly close ML Kit detectors
@@ -88,13 +88,25 @@ class TextAnalyzer(
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             // Simulate background work
-            Thread.sleep(2000)
-
+            Thread.sleep(3000)
             // Update the UI on the main thread
-            recognizeTextOnDevice(inputImage).addOnCompleteListener {
-                imageProxy.close()
-            }
+                recognizeTextOnDevice(inputImage).addOnCompleteListener {
+                    imageProxy.close()
+                }
+
         }
+
+//        handler.postDelayed({
+//            recognizeTextOnDevice(inputImage).addOnCompleteListener {
+//                imageProxy.close()
+//            }
+//        },3000)
+
+//            // Update the UI on the main thread
+//            recognizeTextOnDevice(inputImage).addOnCompleteListener {
+//                imageProxy.close()
+//            }
+
 
 
     }
@@ -107,19 +119,13 @@ class TextAnalyzer(
             .addOnSuccessListener { visionText ->
                 // Task completed successfully
                 result.value = visionText.text
-//                if(visionText.textBlocks.size > 0){
-//                    for( i in 0..<visionText.textBlocks.size){
-//                        for( j in 0..<visionText.textBlocks[i].lines.size){
-//                            result.value = visionText.textBlocks[i].lines[j].text
-//                        }
-//                    }
-//                }
-//                Log.e(TAG, "recognizeTextOnDevice" + visionText.text)
-                processTextRecognitionResult(visionText,viewModel)
+                if(visionText.text.isNotEmpty()){
+                    processTextRecognitionResult(visionText,viewModel)
+                }else {
+                    mGraphicOverlay.clear()
+                }
             }
             .addOnFailureListener { exception ->
-                // Task failed with an exception
-//                Log.e(TAG, "Text recognition error", exception)
                 val message = getErrorMessage(exception)
                 message?.let {
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -128,25 +134,13 @@ class TextAnalyzer(
     }
 
     private fun processTextRecognitionResult(texts: Text , viewModel : MainViewModel) {
-
         val blocks = texts.textBlocks
         if (blocks.size == 0) {
             mGraphicOverlay.clear()
             return
         }
         mGraphicOverlay.clear()
-//        for (i in blocks.indices) {
-//            val lines = blocks[i].lines
-//            for (j in lines.indices) {
-//                val elements = lines[j].elements
-//                for (k in elements.indices) {
-//                    val textGraphic: GraphicOverlay.Graphic = TextGraphic(mGraphicOverlay, elements[k])
-//                    mGraphicOverlay.add(textGraphic)
-//                }
-//            }
-//        }
 
-//        var list  = listOf("Enjoy drinking", "take care", "the driving")
         val listInit = emptyList<String>().toMutableList()
         for (i in blocks.indices) {
             val lines = blocks[i].lines
@@ -155,35 +149,43 @@ class TextAnalyzer(
             }
 
         }
+//        val textSpecial = getTextSpecial(viewModel.targetLang.value.toString());
+//        val string = listInit.joinToString(
+//            separator = textSpecial
+//        )
+//        Log.d("TTT1",""+string+ "" + listInit.size)
+//        val processTranslation =
+//            OnCompleteListener<String> { task ->
+//                if(task.isSuccessful){
+//                    val list = task.result!!.splitToSequence(textSpecial)
+//                        .filter { it.isNotEmpty() } // or: .filter { it.isNotBlank() }
+//                        .toList()
+//
+//                    Log.d("TTTTTTT",""+ task.result +"//"+ string+"//"+list.size + "//" + listInit.size)
+//                    if(list.isNotEmpty()&& list.size == listInit.size){
+//                        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts ,list)
+//                        mGraphicOverlay.add(textGraphic)
+//                        textTranslate.value = ""
+//                    }else {
+//                        textTranslate.value = task.result!!
+//                    }
+//                }else {
+//                    if (task.isCanceled) {
+//                        // Tasks are cancelled for reasons such as gating; ignore.
+//                        return@OnCompleteListener
+//                    }
+////                    translatedText.value = ResultOrError(null, task.exception)
+////                    Log.d("TTT1","Error")
+//                }
+//            }
+//        viewModel.translateText(string).addOnCompleteListener(processTranslation)
 
-        val string = listInit.joinToString(
-            separator = "^",
-        )
-        Log.d("TTT1",""+string+ "" + listInit.size)
-        val processTranslation =
-            OnCompleteListener<String> { task ->
-                if(task.isSuccessful){
-                    val list = task.result!!.splitToSequence("^")
-                        .filter { it.isNotEmpty() } // or: .filter { it.isNotBlank() }
-                        .toList()
-                    Log.d("TTT1",""+task.result.toString() + "" + list.size)
-                    if(list.isNotEmpty() && list.size == listInit.size){
-                        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts ,viewModel,list)
-                        mGraphicOverlay.add(textGraphic)
-                    }
-                }else {
-                    if (task.isCanceled) {
-                        // Tasks are cancelled for reasons such as gating; ignore.
-                        return@OnCompleteListener
-                    }
-//                    translatedText.value = ResultOrError(null, task.exception)
-                    Log.d("TTT1","Error")
-                }
-            }
-        viewModel.translateText(string).addOnCompleteListener(processTranslation)
 
-//        val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts ,viewModel)
-//        mGraphicOverlay.add(textGraphic)
+        viewModel.translateStrings(listInit){ translatedList ->
+//            println("Danh sách đã dịch: $translatedList")
+            val textGraphic: GraphicOverlayNew.Graphic = TextGraphic(mGraphicOverlay, texts ,translatedList)
+            mGraphicOverlay.add(textGraphic)
+        }
 
     }
 
@@ -192,10 +194,6 @@ class TextAnalyzer(
         return if (mlKitException.errorCode == MlKitException.UNAVAILABLE) {
             "Waiting for text recognition model to be downloaded"
         } else exception.message
-    }
-
-    private fun showToast(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
 
     companion object {

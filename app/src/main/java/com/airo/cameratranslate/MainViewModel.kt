@@ -34,9 +34,11 @@ import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.common.model.DownloadConditions
+import com.google.mlkit.common.model.RemoteModelManager
 
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.translate.TranslateLanguage
+import com.google.mlkit.nl.translate.TranslateRemoteModel
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
@@ -49,6 +51,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val languageIdentification = LanguageIdentification.getClient()
     val targetLang = MutableLiveData<Language>()
     val sourceText = SmoothedMutableLiveData<String>(SMOOTHING_DURATION)
+    val textTranslate = SmoothedMutableLiveData<String>(SMOOTHING_DURATION)
 
     // We set desired crop percentages to avoid having to analyze the whole image from the live
     // camera feed. However, we are not guaranteed what aspect ratio we will get from the camera, so
@@ -61,11 +64,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val modelDownloading = SmoothedMutableLiveData<Boolean>(SMOOTHING_DURATION)
 
     private var modelDownloadTask: Task<Void> = Tasks.forCanceled()
+    val modelManager = RemoteModelManager.getInstance()
 
     private val translators =
         object : LruCache<TranslatorOptions, Translator>(NUM_TRANSLATORS) {
             override fun create(options: TranslatorOptions): Translator {
-                Log.d("TranslatorCache", "Creating new translator for options: $options")
+//                Log.d("TranslatorCache", "Creating new translator for options: $options")
                 return Translation.getClient(options)
             }
 
@@ -75,11 +79,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 oldValue: Translator,
                 newValue: Translator?
             ) {
-                Log.d("TranslatorCache", "Removing translator for options: $key")
+//                Log.d("TranslatorCache", "Removing translator for options: $key")
                 try {
                     oldValue.close()
                 } catch (e: Exception) {
-                    Log.e("TranslatorCache", "Error closing translator: ${e.message}")
+//                    Log.e("TranslatorCache", "Error closing translator: ${e.message}")
                 }
             }
         }
@@ -139,10 +143,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 
     fun translateText( str : String): Task<String> {
-        Log.d("TTTT","translateText1" +str)
+//        Log.d("TTTT","translateText1" +str)
         val text = str
         val source = sourceLang.value
         val target = targetLang.value
+        Log.d("TTTT translateText","source:" + sourceLang.value  +"target:" + targetLang.value)
         if (modelDownloading.value != false || translating.value != false) {
             return Tasks.forCanceled()
         }
@@ -174,6 +179,60 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
+    fun translateStrings(inputList: List<String>, callback: (List<String>) -> Unit) {
+        val source = sourceLang.value
+        val target = targetLang.value
+        Log.d("TTTT translateText","source:" + sourceLang.value  +"target:" + targetLang.value)
+        if (modelDownloading.value != false || translating.value != false) {
+            return
+        }
+        if (source == null || target == null || inputList == null || inputList.isEmpty()) {
+            return
+        }
+        val sourceLangCode = TranslateLanguage.fromLanguageTag(source.code)
+        val targetLangCode = TranslateLanguage.fromLanguageTag(target.code)
+        if (sourceLangCode == null || targetLangCode == null) {
+            return
+        }
+        val options = TranslatorOptions.Builder()
+            .setSourceLanguage(sourceLangCode)
+            .setTargetLanguage(targetLangCode)
+            .build()
+        val translator = translators[options]
+
+        // Tải xuống mô hình ngôn ngữ nếu cần thiết
+        translator.downloadModelIfNeeded()
+            .addOnSuccessListener {
+                // Mô hình đã sẵn sàng, bắt đầu dịch từng chuỗi
+                val translatedList = mutableListOf<String>()
+                var count = 0
+
+                inputList.forEach { text ->
+                    translator.translate(text)
+                        .addOnSuccessListener { translatedText ->
+                            // Thêm chuỗi đã dịch vào danh sách kết quả
+                            translatedList.add(translatedText)
+                            count++
+
+                            // Khi tất cả các chuỗi đã được dịch
+                            if (count == inputList.size) {
+                                // Gọi callback với danh sách kết quả đã dịch
+                                callback(translatedList)
+                            }
+                        }
+                        .addOnFailureListener { exception ->
+                            // Xử lý lỗi dịch
+                            exception.printStackTrace()
+                        }
+                }
+            }
+            .addOnFailureListener { exception ->
+                // Xử lý lỗi tải mô hình
+                exception.printStackTrace()
+            }
+    }
+
     // Gets a list of all available translation languages.
     val availableLanguages: List<Language> = TranslateLanguage.getAllLanguages()
         .map { Language(it) }
@@ -198,6 +257,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 //        translatedText.addSource(sourceText) { translate().addOnCompleteListener(processTranslation) }
 //        translatedText.addSource(sourceLang) { translate().addOnCompleteListener(processTranslation) }
 //        translatedText.addSource(targetLang) { translate().addOnCompleteListener(processTranslation) }
+
+
+        modelManager.getDownloadedModels(TranslateRemoteModel::class.java)
+            .addOnSuccessListener { downloadedModels ->
+                // Iterate through the downloaded models and log their languages
+                if(downloadedModels.size > 5){
+                    for (model in downloadedModels) {
+                        val language = model.language
+                        println("Downloaded model for language: $language")
+                        modelManager.deleteDownloadedModel(model)
+                            .addOnSuccessListener {
+                                // Model removed successfully
+                                println("Removed model for language: ${model.language}")
+                            }
+                            .addOnFailureListener { exception ->
+                                // Handle failure in removing model
+                                exception.printStackTrace()
+                            }
+                    }
+                }else {
+                    println("Downloaded model for language: ${downloadedModels.size}")
+                }
+
+            }
+            .addOnFailureListener { exception ->
+                // Handle failure
+                exception.printStackTrace()
+            }
     }
 
     companion object {
