@@ -1,7 +1,6 @@
 package com.airo.cameratranslate
 
 import android.Manifest
-import android.R
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
 import android.os.Bundle
@@ -87,8 +86,14 @@ class MainActivity : AppCompatActivity() {
 
         val adapter = ArrayAdapter(
             this,
-            R.layout.simple_spinner_dropdown_item, viewModel.availableLanguages
+            android.R.layout.simple_spinner_dropdown_item, viewModel.availableLanguages
         )
+        binding.btnPause.setOnClickListener {
+            cameraProvider!!.unbindAll()
+        }
+        binding.btnResume.setOnClickListener {
+            setUpCamera()
+        }
 
         binding.targetLangSelector.adapter = adapter
         binding.targetLangSelector.setSelection(adapter.getPosition(Language("en")))

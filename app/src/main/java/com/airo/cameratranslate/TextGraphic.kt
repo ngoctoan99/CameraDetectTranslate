@@ -79,7 +79,7 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, priva
                     drawText(
                         lists[position],
                         rect,
-                        line.boundingBox!!.height() + 2 * STROKE_WIDTH,
+                        TEXT_SIZE + 2 * STROKE_WIDTH,
                         canvas!!
                     )
 
@@ -105,7 +105,7 @@ class TextGraphic(overlay: GraphicOverlayNew?, private val element: Text?, priva
         rect.top = translateY(rect.top)
         rect.bottom = translateY(rect.bottom)
         canvas.drawRect(rect, rectPaint)
-        textPaint.textSize =textHeight
+//        textPaint.textSize =textHeight
         val textWidth = textPaint.measureText(text)
         canvas.drawRect(
             rect.left - STROKE_WIDTH,

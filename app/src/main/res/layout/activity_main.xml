@@ -112,7 +112,25 @@
         app:layout_constraintBottom_toBottomOf="@id/progressBar"
         android:gravity="center_vertical"
         app:layout_constraintTop_toTopOf="@id/progressBar" />
+    <Button
+        android:id="@+id/btnPause"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="10dp"
+        android:text="Pause"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
 
+    <Button
+        android:id="@+id/btnResume"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/btnPause"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="10dp"
+        android:text="Resume"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/middle"
         android:layout_width="wrap_content"
